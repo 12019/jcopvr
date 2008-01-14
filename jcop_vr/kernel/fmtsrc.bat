@@ -1,0 +1,1 @@
+"C:\Program Files\astyle\bin\AStyle.exe" --style=linux --indent=tab --indent-switches --pad=oper --unpad=paren *.cpp *.h

@@ -1,0 +1,24 @@
+MUI_386_OBJECTS=
+
+386_OBJECTS= \
+    $(_OBJ_DIR)\i386\dbglog.obj \
+    $(_OBJ_DIR)\i386\jcop_vr.obj
+
+MUI_IA64_OBJECTS=
+
+IA64_OBJECTS= \
+    $(_OBJ_DIR)\ia64\dbglog.obj \
+    $(_OBJ_DIR)\ia64\jcop_vr.obj
+
+MUI_AMD64_OBJECTS=
+
+AMD64_OBJECTS= \
+    $(_OBJ_DIR)\amd64\dbglog.obj \
+    $(_OBJ_DIR)\amd64\jcop_vr.obj
+
+MUI_ARM_OBJECTS=
+
+ARM_OBJECTS= \
+    $(_OBJ_DIR)\arm\dbglog.obj \
+    $(_OBJ_DIR)\arm\jcop_vr.obj
+

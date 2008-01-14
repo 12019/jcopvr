@@ -1,0 +1,9 @@
+TARGETNAME=jcop_vr
+TARGETTYPE=DRIVER
+TARGETPATH=obj
+TARGETLIBS=$(DDK_LIB_PATH)\smclib.lib
+
+INCLUDES=..\inc
+
+SOURCES=dbglog.cpp	\
+	jcop_vr.cpp
