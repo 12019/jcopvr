@@ -87,6 +87,8 @@ typedef struct _READER_EXTENSION {
  * \param [out] pRcv A pointer to buffer of received data.
  * \param [in] rcvLenExp length of pRcv. caller's expected Max length of receiving data.
  * \param [out] pRcvLen actual lengh of received data.
+ * \param [in] pDueTime wait time duration in LARGE_INTEGER. if it is NULL, 
+	the routine waits indefinitely.
  *
  * \retval STATUS_SUCCESS the routine successfully end.
  * \retval STATUS_IO_TIMEOUT The request timed out.
@@ -100,7 +102,8 @@ static int sendMessage(
     unsigned short const sndLen,
     char *const pRcv,
     unsigned short const rcvLenExp,
-    unsigned short *const pRcvLen)
+    unsigned short *const pRcvLen,
+	PLARGE_INTEGER pDueTime)
 {
 	dbg_log("sendMessage start");
 
@@ -146,16 +149,13 @@ static int sendMessage(
 		dbg_log("pReaderExtension->hEventRcv == NULL");
 		return status;
 	}
-	long msec = 1000;	// wait for 1sec.
-	LARGE_INTEGER dueTime;
-	dueTime.QuadPart = -10000 * msec;
 	// wait for event.
 	status = KeWaitForSingleObject(
 	             (PKEVENT)pReaderExtension->hEventRcv,
 	             Executive,
 	             KernelMode,
 	             FALSE,
-	             &dueTime
+	             pDueTime
 	         );
 	if (status != STATUS_SUCCESS) {
 		switch (status) {
@@ -241,6 +241,10 @@ static NTSTATUS resetCard(PSMARTCARD_EXTENSION pSmartcardExtension)
 	unsigned short atrLen;
 	char atr[JCOP_PROXY_MAX_ATR_SIZE];
 
+	long msec = 1000;	// wait for 1sec.
+	LARGE_INTEGER dueTime;
+	dueTime.QuadPart = -10000 * msec;
+
 	status = sendMessage(
 	             pReaderExtension,
 	             mty,
@@ -249,7 +253,8 @@ static NTSTATUS resetCard(PSMARTCARD_EXTENSION pSmartcardExtension)
 	             4,
 	             atr,
 	             (unsigned short)pSmartcardExtension->IoRequest.ReplyBufferLength,
-	             &atrLen
+	             &atrLen,
+				 &dueTime
 	         );
 	if (status != STATUS_SUCCESS) {
 		dbg_log("sendResetMessage failed! - status: 0x%08X", status);
@@ -327,7 +332,21 @@ static NTSTATUS powerDown(PSMARTCARD_EXTENSION pSmartcardExtension)
 	char pRcv[8];
 	unsigned short rcvLen;
 
-	status = sendMessage(pReaderExtension, mty, nad, pSnd, 4, pRcv, 8, &rcvLen);
+	long msec = 1000;	// wait for 1sec.
+	LARGE_INTEGER dueTime;
+	dueTime.QuadPart = -10000 * msec;
+
+	status = sendMessage(
+		pReaderExtension, 
+		mty, 
+		nad, 
+		pSnd, 
+		4, 
+		pRcv, 
+		8, 
+		&rcvLen, 
+		&dueTime
+	);
 	if (status != STATUS_SUCCESS) {
 		dbg_log("sendPowerDownMessage failed! - status: 0x%08X", status);
 		switch (status) {
@@ -487,7 +506,8 @@ static NTSTATUS transmitT0(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 	             (unsigned short)pSmartcardExtension->SmartcardRequest.BufferLength,
 	             (char *)pSmartcardExtension->SmartcardReply.Buffer,
 	             (unsigned short)pSmartcardExtension->SmartcardReply.BufferSize,
-	             (unsigned short *) & pSmartcardExtension->SmartcardReply.BufferLength
+	             (unsigned short *) & pSmartcardExtension->SmartcardReply.BufferLength,
+				 NULL	// wait indefinitely
 	         );
 	dbg_log(
 	    "pSmartcardExtension->SmartcardReply.BufferLength: %d",

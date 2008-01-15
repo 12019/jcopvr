@@ -26,7 +26,7 @@
 
 /*!
  * \file jcop_proxy.cpp
- * \brief JCOP Proxy (user-mode application for JCOP JCOP Simulation Virtual Reader Driver) - Main Module.
+ * \brief JCOP Proxy (user-mode application for JCOP Simulation Virtual Reader Driver) - Main Module.
  * \author Kenichi Kanai
  */
 #include <windows.h>
