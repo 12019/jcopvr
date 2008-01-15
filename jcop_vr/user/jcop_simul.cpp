@@ -105,8 +105,10 @@ static void close_socket()
  * \param [in] pSnd A pointer to first byte of message.
  * \param [in] iSndLen length of message.
  * \param [out] pRcv A pointer to buffer to receive.
- * \param [in][out] pRcvLen [in]length of pRcv. caller's expected Max length of receiving data.
-		[out]actual lengh of received data.
+ * \param [in][out] pRcvLen [in]length of pRcv. caller's expected Max length of 
+		receiving data. [out]actual lengh of received data.
+ * \param [in] pDueTime A pointer duration to time out. if it is NULL, 
+		the routine waits indefinitely.
  *
  * \retval JCOP_SIMUL_NO_ERROR
  * \retval JCOP_SIMUL_ERROR_TIMEOUT
@@ -116,7 +118,8 @@ static int send_receive(
 	char const *const pSnd, 
 	unsigned short const iSndLen, 
 	char *const pRcv, 
-	unsigned short *const pRcvLen
+	unsigned short *const pRcvLen,
+	timeval *pDueTime
 )
 {
 	// send data.
@@ -127,12 +130,7 @@ static int send_receive(
 	FD_ZERO(&fds);
 	FD_SET(g_socket, &fds);
 
-	// set duration to time out.
-	timeval tv;
-	tv.tv_sec = 0;	// 0sec.
-	tv.tv_usec = 0;
-
-	int n = select(0, &fds, NULL, NULL, &tv);
+	int n = select(0, &fds, NULL, NULL, pDueTime);
 	if (n == 0) {
 		dbg_log("timeout");
 		close_socket();
@@ -193,7 +191,12 @@ int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
 	pSnd[7] = 0x00;
 	dbg_ba2s(pSnd, 8);
 
-	status = send_receive(pSnd, sizeof(pSnd), g_rcv, pAtrLen);
+	// set duration to time out.
+	timeval tv;
+	tv.tv_sec = 0;	// 0sec.
+	tv.tv_usec = 0;
+
+	status = send_receive(pSnd, sizeof(pSnd), g_rcv, pAtrLen, &tv);
 	dbg_log("*pAtrLen: %d", *pAtrLen);
 	dbg_ba2s(g_rcv, *pAtrLen);
 	if (status != 0) {
@@ -238,7 +241,7 @@ int JCOP_SIMUL_transmit(
 
 	dbg_ba2s(pSnd, sndLen);
 
-	int status = send_receive(pSnd, sndLen, g_rcv, pRcvLen);
+	int status = send_receive(pSnd, sndLen, g_rcv, pRcvLen, NULL);
 	dbg_log("*pRcvLen: %d", *pRcvLen);
 	dbg_ba2s(g_rcv, *pRcvLen);
 	if (status != 0) {
