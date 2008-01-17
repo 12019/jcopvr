@@ -1,5 +1,5 @@
 /*
- * $Id$
+ * $Id: jcop_simul.h 5 2008-01-14 06:27:45Z kanai.kenichi $
  */
 
 /*
@@ -25,21 +25,14 @@
  */
 
 /*!
- * \file jcop_simul.h
- * \brief prototypes for functions which communicate with JCOP Simulator
+ * \file t1.h
+ * \brief prototypes for T=1 functions.
  * \author Kenichi Kanai
  */
-#ifndef __JCOP_SIMUL__
-#define __JCOP_SIMUL__
+#ifndef __T1__
+#define __T1__
 
-#define JCOP_SIMUL_NO_ERROR		0x00
-#define JCOP_SIMUL_ERROR_INITIALIZE		0x01
-#define JCOP_SIMUL_ERROR_TIMEOUT		0x02
-#define JCOP_SIMUL_ERROR_BUFFER_TOO_SMALL	0x03
-#define JCOP_SIMUL_ERROR_OTHER			0x04
+int T1_processMsg(char *const pSnd, const unsigned short sndLen, char *const pRcv, unsigned short *const pRcvLen);
 
-int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen);
-int JCOP_SIMUL_transmit(char const *const pSnd, const unsigned short sndLen, char *const pRcv, unsigned short *const pRcvLen);
-void JCOP_SIMUL_close();
+#endif // __T1__
 
-#endif // __JCOP_SIMUL__

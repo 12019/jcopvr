@@ -17,7 +17,8 @@ CFLAGS=$(CFLAGS) /MTd
 
 SOURCES=jcop_proxy.c	\
 	jcop_simul.cpp	\
-	dbglog.cpp
+	dbglog.cpp	\
+	t1.cpp
 
 UMTYPE=console
 UMBASE=0x0400000

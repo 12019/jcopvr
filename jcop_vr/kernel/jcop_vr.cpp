@@ -87,7 +87,7 @@ typedef struct _READER_EXTENSION {
  * \param [out] pRcv A pointer to buffer of received data.
  * \param [in] rcvLenExp length of pRcv. caller's expected Max length of receiving data.
  * \param [out] pRcvLen actual lengh of received data.
- * \param [in] pDueTime wait time duration in LARGE_INTEGER. if it is NULL, 
+ * \param [in] pDueTime wait time duration in LARGE_INTEGER. if it is NULL,
 	the routine waits indefinitely.
  *
  * \retval STATUS_SUCCESS the routine successfully end.
@@ -103,7 +103,7 @@ static int sendMessage(
     char *const pRcv,
     unsigned short const rcvLenExp,
     unsigned short *const pRcvLen,
-	PLARGE_INTEGER pDueTime)
+    PLARGE_INTEGER pDueTime)
 {
 	dbg_log("sendMessage start");
 
@@ -254,7 +254,7 @@ static NTSTATUS resetCard(PSMARTCARD_EXTENSION pSmartcardExtension)
 	             atr,
 	             (unsigned short)pSmartcardExtension->IoRequest.ReplyBufferLength,
 	             &atrLen,
-				 &dueTime
+	             &dueTime
 	         );
 	if (status != STATUS_SUCCESS) {
 		dbg_log("sendResetMessage failed! - status: 0x%08X", status);
@@ -287,21 +287,16 @@ static NTSTATUS resetCard(PSMARTCARD_EXTENSION pSmartcardExtension)
 	// set state the reader connected, but the card has been reset.
 	pSmartcardExtension->ReaderCapabilities.CurrentState = SCARD_NEGOTIABLE;
 
-	// we do not to parse ATR with SmartcardUpdateCardCapabilities.
 	// The SmartcardUpdateCardCapabilities routine translates an answer-to-reset (ATR)
 	// string into the SCARD_CARD_CAPABILITIES structure that the driver can use.
 	// http://msdn2.microsoft.com/en-us/library/ms801323.aspx
-	//
-	//RtlCopyMemory(pSmartcardExtension->CardCapabilities.ATR.Buffer, atr, atrLen);
-	//pSmartcardExtension->CardCapabilities.ATR.Length = (UCHAR)atrLen;
-	//status = SmartcardUpdateCardCapabilities(pSmartcardExtension);
-	//if (status != STATUS_SUCCESS) {
-	//	dbg_log("SmartcardUpdateCardCapabilities failed! - status: 0x%08X", status);
-	//	return status;
-	//}
-	
-	pSmartcardExtension->CardCapabilities.Protocol.Selected = SCARD_PROTOCOL_T0;
-	pSmartcardExtension->ReaderCapabilities.CurrentState = SCARD_SPECIFIC;
+	RtlCopyMemory(pSmartcardExtension->CardCapabilities.ATR.Buffer, atr, atrLen);
+	pSmartcardExtension->CardCapabilities.ATR.Length = (UCHAR)atrLen;
+	status = SmartcardUpdateCardCapabilities(pSmartcardExtension);
+	if (status != STATUS_SUCCESS) {
+		dbg_log("SmartcardUpdateCardCapabilities failed! - status: 0x%08X", status);
+		return status;
+	}
 
 	dbg_log("resetCard end - status: 0x%08X", status);
 	return status;
@@ -337,16 +332,16 @@ static NTSTATUS powerDown(PSMARTCARD_EXTENSION pSmartcardExtension)
 	dueTime.QuadPart = -10000 * msec;
 
 	status = sendMessage(
-		pReaderExtension, 
-		mty, 
-		nad, 
-		pSnd, 
-		4, 
-		pRcv, 
-		8, 
-		&rcvLen, 
-		&dueTime
-	);
+	             pReaderExtension,
+	             mty,
+	             nad,
+	             pSnd,
+	             4,
+	             pRcv,
+	             8,
+	             &rcvLen,
+	             &dueTime
+	         );
 	if (status != STATUS_SUCCESS) {
 		dbg_log("sendPowerDownMessage failed! - status: 0x%08X", status);
 		switch (status) {
@@ -364,7 +359,6 @@ static NTSTATUS powerDown(PSMARTCARD_EXTENSION pSmartcardExtension)
 	dbg_log("powerDown end - status: 0x%08X", status);
 	return status;
 }
-
 
 /*!
  * \brief Entry point for RDF_CARD_POWER.<br>
@@ -427,10 +421,9 @@ NTSTATUS VR_RDF_SetProtocol(PSMARTCARD_EXTENSION pSmartcardExtension)
 	}
 
 	USHORT protocol = (USHORT)(pSmartcardExtension->MinorIoControlCode);
-	//if ((protocol & (SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1)) == 0) {
-	if ((protocol & SCARD_PROTOCOL_T0) == 0) {
-		// protocol is not T=0.
-		dbg_log("STATUS_INVALID_DEVICE_REQUEST - protocol is not T=0");
+	if ((protocol & (SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1)) == 0) {
+		// protocol is nether T=0 nor T=1.
+		dbg_log("STATUS_INVALID_DEVICE_REQUEST - protocol is nether T=0 nor T=1.");
 		dbg_log(
 		    "pSmartcardExtension->MinorIoControlCode: 0x%08X",
 		    pSmartcardExtension->MinorIoControlCode
@@ -450,9 +443,6 @@ NTSTATUS VR_RDF_SetProtocol(PSMARTCARD_EXTENSION pSmartcardExtension)
 	// the selected protocol in SmartcardExtension->IoRequest.ReplyBuffer.
 	//
 	// http://msdn2.microsoft.com/en-us/library/ms801313.aspx
-
-	// select T=0.
-	protocol = SCARD_PROTOCOL_T0;
 
 	// return the selected protocol to the caller.
 	*(PULONG)(pSmartcardExtension->IoRequest.ReplyBuffer) = protocol;
@@ -507,7 +497,7 @@ static NTSTATUS transmitT0(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 	             (char *)pSmartcardExtension->SmartcardReply.Buffer,
 	             (unsigned short)pSmartcardExtension->SmartcardReply.BufferSize,
 	             (unsigned short *) & pSmartcardExtension->SmartcardReply.BufferLength,
-				 NULL	// wait indefinitely
+	             NULL	// wait indefinitely
 	         );
 	dbg_log(
 	    "pSmartcardExtension->SmartcardReply.BufferLength: %d",
@@ -529,6 +519,81 @@ static NTSTATUS transmitT0(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 	}
 
 	dbg_log("transmitT0 end - status: 0x%08X", status);
+	return status;
+}
+
+/*!
+ * \brief Function performs data transmissions T=1.<br>
+ * <br>
+ * \param [in] pSmartcardExtension A pointer to the smart card extension,
+		SMARTCARD_EXTENSION, of the device.
+ *
+ * \retval STATUS_SUCCESS the routine successfully end.
+ */
+static NTSTATUS transmitT1(IN PSMARTCARD_EXTENSION pSmartcardExtension)
+{
+	dbg_log("transmitT1 start");
+	NTSTATUS status = STATUS_SUCCESS;
+
+	do {
+		// reset request buffer before calling SmartcardT1Request
+		// not to add any Header with T=1 message.
+		RtlZeroMemory(pSmartcardExtension->SmartcardRequest.Buffer, pSmartcardExtension->SmartcardRequest.BufferLength);
+		pSmartcardExtension->SmartcardRequest.BufferLength = 0;
+
+		status = SmartcardT1Request(pSmartcardExtension);
+		if (status != STATUS_SUCCESS) {
+			dbg_log("SmartcardT0Request failed! - status: 0x%08X", status);
+			return status;
+		}
+		dbg_log("transmitT1 SEND: ");
+		dbg_ba2s(
+		    (char const *const)pSmartcardExtension->SmartcardRequest.Buffer,
+		    pSmartcardExtension->SmartcardRequest.BufferLength
+		);
+		dbg_log("pSmartcardExtension->SmartcardRequest.Buffer[1]: 0x%08X", pSmartcardExtension->SmartcardRequest.Buffer[1]);
+
+		// send command to JCOP simulator.
+		PREADER_EXTENSION pReaderExtension = pSmartcardExtension->ReaderExtension;
+
+		// send "T1" meessage.
+		unsigned char mty = 0x11;	// MTY 0x11(T1 Message)
+		unsigned char nad = 0x00;	// NAD
+
+		status = sendMessage(
+		             pReaderExtension,
+		             mty,
+		             nad,
+		             (char *)pSmartcardExtension->SmartcardRequest.Buffer,
+		             (unsigned short)pSmartcardExtension->SmartcardRequest.BufferLength,
+		             (char *)pSmartcardExtension->SmartcardReply.Buffer,
+		             (unsigned short)pSmartcardExtension->SmartcardReply.BufferSize,
+		             (unsigned short *) & pSmartcardExtension->SmartcardReply.BufferLength,
+		             NULL	// wait indefinitely
+		         );
+		dbg_log(
+		    "pSmartcardExtension->SmartcardReply.BufferLength: %d",
+		    pSmartcardExtension->SmartcardReply.BufferLength
+		);
+		dbg_ba2s(
+		    (char *const)pSmartcardExtension->SmartcardReply.Buffer,
+		    pSmartcardExtension->SmartcardReply.BufferLength
+		);
+		if (status != STATUS_SUCCESS) {
+			dbg_log("sendApduMessage failed! - status: 0x%08X", status);
+			return status;
+		}
+
+		status = SmartcardT1Reply(pSmartcardExtension);
+		dbg_log("SmartcardT1Reply - status: 0x%08X", status);
+
+	} while (status == STATUS_MORE_PROCESSING_REQUIRED);
+	if (status != STATUS_SUCCESS) {
+		dbg_log("SmartcardT0Reply failed! - status: 0x%08X", status);
+		return status;
+	}
+
+	dbg_log("transmitT1 end - status: 0x%08X", status);
 	return status;
 }
 
@@ -580,7 +645,8 @@ NTSTATUS VR_RDF_Transmit(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 			break;
 		case SCARD_PROTOCOL_T1 :
 			dbg_log("SCARD_PROTOCOL_T1");
-			status = STATUS_INVALID_DEVICE_REQUEST;
+			//status = STATUS_INVALID_DEVICE_REQUEST;
+			status = transmitT1(pSmartcardExtension);
 			break;
 		case SCARD_PROTOCOL_RAW :
 			dbg_log("SCARD_PROTOCOL_RAW");
@@ -752,17 +818,18 @@ static NTSTATUS createReaderDevice(IN PDEVICE_OBJECT pDeviceObject, IN PUNICODE_
 	pSmartcardExtension->VendorAttr.IfdSerialNo.Length = 0;
 
 	// setup smartcard extension - reader capabilities
-	//pSmartcardExtension->ReaderCapabilities.ReaderType =
-	//    SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
-	pSmartcardExtension->ReaderCapabilities.ReaderType = SCARD_PROTOCOL_T0;
-	pSmartcardExtension->ReaderCapabilities.SupportedProtocols = 
-		SCARD_READER_TYPE_VENDOR;
+	pSmartcardExtension->ReaderCapabilities.ReaderType =
+	    SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
+	pSmartcardExtension->ReaderCapabilities.SupportedProtocols =
+	    SCARD_READER_TYPE_VENDOR;
 	// set state the reader connected, but a card is not powered.
 	pSmartcardExtension->ReaderCapabilities.CurrentState = SCARD_PRESENT;
-    pSmartcardExtension->ReaderCapabilities.CLKFrequency.Default = 3580;
-    pSmartcardExtension->ReaderCapabilities.CLKFrequency.Max = 3580;
-    pSmartcardExtension->ReaderCapabilities.DataRate.Default = 9600;
-    pSmartcardExtension->ReaderCapabilities.DataRate.Max = 9600;
+
+	// following values are required for SmartcardUpdateCardCapabilities routine.
+	pSmartcardExtension->ReaderCapabilities.CLKFrequency.Default = 3580;
+	pSmartcardExtension->ReaderCapabilities.CLKFrequency.Max = 3580;
+	pSmartcardExtension->ReaderCapabilities.DataRate.Default = 9600;
+	pSmartcardExtension->ReaderCapabilities.DataRate.Max = 9600;
 	pSmartcardExtension->ReaderCapabilities.MaxIFSD = 254;
 
 	// invoke SmartcardInitialize

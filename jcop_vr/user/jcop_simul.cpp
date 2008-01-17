@@ -4,17 +4,17 @@
 
 /*
  * Copyright (c) 2008 Kenichi Kanai
- * 
+ *
  * Permission is hereby granted, free of charge, to any person obtaining a copy
  * of this software and associated documentation files (the "Software"), to deal
  * in the Software without restriction, including without limitation the rights
  * to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  * copies of the Software, and to permit persons to whom the Software is
  * furnished to do so, subject to the following conditions:
- * 
+ *
  * The above copyright notice and this permission notice shall be included in
  * all copies or substantial portions of the Software.
- * 
+ *
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -30,7 +30,8 @@
  * \author Kenichi Kanai
  */
 #ifdef __cplusplus
-extern "C" {
+extern "C"
+{
 #endif
 
 #include <winsock.h>
@@ -67,7 +68,8 @@ static void close_socket()
  * \retval JCOP_SIMUL_NO_ERROR
  * \retval JCOP_SIMUL_ERROR_INITIALIZE
  */
- static int open_socket() {
+static int open_socket()
+{
 	WSADATA wsaData;
 	int status;
 	status = WSAStartup(MAKEWORD(2, 0), &wsaData);
@@ -89,7 +91,7 @@ static void close_socket()
 	server.sin_addr.S_un.S_addr = inet_addr(JCOP_HOST);
 
 	// connect to JCOP simulator.
-	status = connect(g_socket, (sockaddr *)&server, sizeof(server));
+	status = connect(g_socket, (sockaddr *) & server, sizeof(server));
 	if (status != 0) {
 		dbg_log("connect : %d", WSAGetLastError());
 		close_socket();
@@ -105,9 +107,9 @@ static void close_socket()
  * \param [in] pSnd A pointer to first byte of message.
  * \param [in] iSndLen length of message.
  * \param [out] pRcv A pointer to buffer to receive.
- * \param [in][out] pRcvLen [in]length of pRcv. caller's expected Max length of 
+ * \param [in][out] pRcvLen [in]length of pRcv. caller's expected Max length of
 		receiving data. [out]actual lengh of received data.
- * \param [in] pDueTime A pointer duration to time out. if it is NULL, 
+ * \param [in] pDueTime A pointer duration to time out. if it is NULL,
 		the routine waits indefinitely.
  *
  * \retval JCOP_SIMUL_NO_ERROR
@@ -115,11 +117,11 @@ static void close_socket()
  * \retval JCOP_SIMUL_ERROR_OTHER
  */
 static int send_receive(
-	char const *const pSnd, 
-	unsigned short const iSndLen, 
-	char *const pRcv, 
-	unsigned short *const pRcvLen,
-	timeval *pDueTime
+    char const *const pSnd,
+    unsigned short const iSndLen,
+    char *const pRcv,
+    unsigned short *const pRcvLen,
+    timeval *pDueTime
 )
 {
 	// send data.
@@ -170,7 +172,6 @@ static int send_receive(
  */
 int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
 {
-
 	if (g_socket != INVALID_SOCKET) {
 		close_socket();
 	}
@@ -218,7 +219,7 @@ int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
  * <br>
  * \param [in] pSnd A pointer to first byte of message.
  * \param [in] iSndLen length of message.
- * \param [out] pRcv A pointer to buffer of received payload data. 
+ * \param [out] pRcv A pointer to buffer of received payload data.
  * \param [in][out] pRcvLen [in]length of pRcv. caller's expected Max length of receiving payload data.
 		[out]actual lengh of received payload data.
  *
@@ -228,13 +229,12 @@ int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
  * \retval JCOP_SIMUL_ERROR_OTHER
  */
 int JCOP_SIMUL_transmit(
-	char const *const pSnd, 
-	const unsigned short sndLen, 
-	char *const pRcv, 
-	unsigned short *const pRcvLen
+    char const *const pSnd,
+    const unsigned short sndLen,
+    char *const pRcv,
+    unsigned short *const pRcvLen
 )
 {
-
 	if (g_socket == INVALID_SOCKET) {
 		return JCOP_SIMUL_ERROR_INITIALIZE;
 	}
