@@ -298,6 +298,9 @@ static NTSTATUS resetCard(PSMARTCARD_EXTENSION pSmartcardExtension)
 		return status;
 	}
 
+	//pSmartcardExtension->CardCapabilities.Protocol.Selected = SCARD_PROTOCOL_T0;
+	//pSmartcardExtension->ReaderCapabilities.CurrentState = SCARD_SPECIFIC;
+
 	dbg_log("resetCard end - status: 0x%08X", status);
 	return status;
 }
@@ -540,6 +543,9 @@ static NTSTATUS transmitT1(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 		// not to add any Header with T=1 message.
 		RtlZeroMemory(pSmartcardExtension->SmartcardRequest.Buffer, pSmartcardExtension->SmartcardRequest.BufferLength);
 		pSmartcardExtension->SmartcardRequest.BufferLength = 0;
+
+		dbg_log("pSmartcardExtension->T1.IFSC: 0x%08X", pSmartcardExtension->T1.IFSC);
+		dbg_log("pSmartcardExtension->T1.IFSD: 0x%08X", pSmartcardExtension->T1.IFSD);
 
 		status = SmartcardT1Request(pSmartcardExtension);
 		if (status != STATUS_SUCCESS) {
@@ -822,6 +828,7 @@ static NTSTATUS createReaderDevice(IN PDEVICE_OBJECT pDeviceObject, IN PUNICODE_
 	    SCARD_PROTOCOL_T0 | SCARD_PROTOCOL_T1;
 	pSmartcardExtension->ReaderCapabilities.SupportedProtocols =
 	    SCARD_READER_TYPE_VENDOR;
+
 	// set state the reader connected, but a card is not powered.
 	pSmartcardExtension->ReaderCapabilities.CurrentState = SCARD_PRESENT;
 
@@ -830,7 +837,8 @@ static NTSTATUS createReaderDevice(IN PDEVICE_OBJECT pDeviceObject, IN PUNICODE_
 	pSmartcardExtension->ReaderCapabilities.CLKFrequency.Max = 3580;
 	pSmartcardExtension->ReaderCapabilities.DataRate.Default = 9600;
 	pSmartcardExtension->ReaderCapabilities.DataRate.Max = 9600;
-	pSmartcardExtension->ReaderCapabilities.MaxIFSD = 254;
+	//pSmartcardExtension->ReaderCapabilities.MaxIFSD = 0xFE;
+	pSmartcardExtension->ReaderCapabilities.MaxIFSD = 0x93;
 
 	// invoke SmartcardInitialize
 	pSmartcardExtension->Version = SMCLIB_VERSION;
