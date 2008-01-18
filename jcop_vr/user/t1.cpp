@@ -1,5 +1,5 @@
 /*
- * $Id: jcop_simul.cpp 8 2008-01-15 11:22:57Z kanai.kenichi $
+ * $Id:$
  */
 
 /*
@@ -39,19 +39,20 @@
 #include "shared_data.h"
 #include "jcop_simul.h"
 
-#define IFS	0xFE
+//#define IFS	0xFE
+#define IFS	0x93
 #define PCB_I_SEQ	0x40
 #define PCB_I_MORE	0x20
+
+#define PCB_R_SEQ	0x10
+
 #define PCB_S_CARD	0x20
 
 static bool g_isSndChained = false;
-static unsigned char g_sndSeq = PCB_I_SEQ;
 static char g_sndBuf[JCOP_PROXY_BUFFER_SIZE];
-static int g_sndBufOff = -1;
-static int g_sndBufLen = -1;
+static int g_sndBufOff = 0;
 
 static bool g_isRcvChained = false;
-static unsigned char g_rcvSeq = PCB_I_SEQ;
 static char g_rcvBuf[JCOP_PROXY_BUFFER_SIZE];
 static int g_rcvBufOff = -1;
 static int g_rcvBufLen = -1;
@@ -111,11 +112,11 @@ int T1_processMsg(
 		// S-block
 
 		// IFS req
-		// pSnd: MTY NAD LNH LNL | NAD PCB LEN | DATA... | EDC
+		// pSnd: MTY NAD LNH LNL | NAD PCB LEN | INF... | EDC
 		// pSnd: 11000004 00C101 FE 3E
 		// PCB E1: S-block IFS resp.
 
-		// WTX req
+		// WTX req, RESYNCH req, ABORT req..
 
 		*pRcvLen = createT1Msg(pRcv, nad, (pcb | PCB_S_CARD), pSnd[6], &pSnd[7]);
 		return 0;
@@ -132,19 +133,22 @@ int T1_processMsg(
 
 		// R-block
 		int remain = g_rcvBufLen - g_rcvBufOff;
+		unsigned char rSeq = 0x00;
+		if ((pcb & PCB_R_SEQ) == PCB_R_SEQ) {
+			// set sequence bit.
+			rSeq = PCB_I_SEQ;
+		}
 		if (remain > IFS) {
 			// I-block resp chaining continue.
-			*pRcvLen = createT1Msg(pRcv, nad, (PCB_I_MORE | g_rcvSeq), IFS, &g_rcvBuf[g_rcvBufOff]);
+			*pRcvLen = createT1Msg(pRcv, nad, (PCB_I_MORE | rSeq), IFS, &g_rcvBuf[g_rcvBufOff]);
 			g_rcvBufOff += IFS;
 			g_rcvBufLen -= IFS;
-			g_rcvSeq ^= PCB_I_SEQ;
 		} else {
 			// I-block resp chaining end.
-			*pRcvLen = createT1Msg(pRcv, nad, (0x00 | g_rcvSeq), (remain & 0x00FF), &g_rcvBuf[g_rcvBufOff]);
+			*pRcvLen = createT1Msg(pRcv, nad, (0x00 | rSeq), (remain & 0x00FF), &g_rcvBuf[g_rcvBufOff]);
 			g_isRcvChained = false;
 			g_rcvBufOff = -1;
 			g_rcvBufLen = -1;
-			g_rcvSeq = PCB_I_SEQ;
 		}
 
 	} else {
@@ -157,28 +161,42 @@ int T1_processMsg(
 		}
 
 		// I-block
+		unsigned short len = sndLen - 4;	// remove T=1 header and EDC.
+		unsigned short apduLen = len - 4;	// remove socket header.
+		memcpy(&g_sndBuf[g_sndBufOff], &pSnd[4 + 3], apduLen);
+		g_sndBufOff += apduLen;
+
+		dbg_ba2s(pSnd, len);
+
 		if ((pcb & PCB_I_MORE) == PCB_I_MORE) {
 			// PCB has a MORE bit.
+			g_isSndChained = true;
+
+			unsigned char rSeq = 0x00;
+			if ((pcb & PCB_I_SEQ) != PCB_I_SEQ) {
+				// set sequence bit.
+				rSeq = PCB_R_SEQ;
+			}
+
+			// R-block
 			char data[1] = { 0x00 };
-			*pRcvLen = createT1Msg(pRcv, nad, 0x80, 0x00, data);	// R-block
+			*pRcvLen = createT1Msg(pRcv, nad, (0x80 | rSeq), 0x00, data);
 			return 0;
 		}
 
-		// pSnd: MTY NAD LNH LNL | NAD PCB LEN | DATA... | EDC
+		// pSnd: MTY NAD LNH LNL | NAD PCB LEN | INF... | EDC
 		// pSnd: 11000009 000005 80CA9F7F00 AF
 
 		// remove T=1 message and reconstruct socket message.
 		pSnd[0] = 0x01;	// MTY=0x01:  Transmit APDU
-		unsigned short len = sndLen - 4;	// remove T=1 header and EDC.
-		unsigned short apduLen = len - 4;	// remove socket header.
-		pSnd[2] = apduLen / 256;	// LNH High byte of payload length
-		pSnd[3] = apduLen % 256;	// LNL Low byte of payload length
-		memmove(&pSnd[4], &pSnd[4 + 3], apduLen);
+		pSnd[2] = g_sndBufOff / 256;	// LNH High byte of payload length
+		pSnd[3] = g_sndBufOff % 256;	// LNL Low byte of payload length
+		memcpy(&pSnd[4], g_sndBuf, g_sndBufOff);
 
 		// pSnd: MTY NAD LNH LNL | DATA...
 		// pSnd: 11000005 80CA9F7F00
 
-		dbg_ba2s(pSnd, len);
+		dbg_ba2s(pSnd, g_sndBufOff);
 		unsigned short respLen = *pRcvLen;
 		// send command to JCOP simulator.
 		status = JCOP_SIMUL_transmit(pSnd, len, &pRcv[3], &respLen);
@@ -188,16 +206,20 @@ int T1_processMsg(
 			return status;
 		}
 
+		// I-block req chaining end.
+		g_isSndChained = false;
+		g_sndBufOff = 0;
+
 		if (respLen < IFS) {
 			// I-block resp end.
 			*pRcvLen = createT1Msg(pRcv, nad, pcb, (unsigned char)respLen, &pRcv[3]);
 		} else {
 			// I-block resp chaining start.
-			*pRcvLen = createT1Msg(pRcv, nad, (pcb | PCB_I_MORE), IFS, &pRcv[3]);
 			memcpy(g_rcvBuf, &pRcv[3], respLen);
 			g_isRcvChained = true;
 			g_rcvBufOff = IFS;
 			g_rcvBufLen = respLen;
+			*pRcvLen = createT1Msg(pRcv, nad, (pcb | PCB_I_MORE), IFS, &pRcv[3]);
 		}
 	}
 

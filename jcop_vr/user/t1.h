@@ -1,5 +1,5 @@
 /*
- * $Id: jcop_simul.h 5 2008-01-14 06:27:45Z kanai.kenichi $
+ * $Id$
  */
 
 /*
