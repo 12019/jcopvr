@@ -132,6 +132,8 @@ int __cdecl main(int argc, char* argv[])
 					dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
 					continue;
 				}
+				// reset Card sequence No.
+				T1_resetSeq();
 				break;
 			case 0x01 :
 				dbg_log("MTY=0x01: T=0 Transmit APDU");

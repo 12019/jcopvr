@@ -198,16 +198,17 @@ int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
 	tv.tv_usec = 0;
 
 	status = send_receive(pSnd, sizeof(pSnd), g_rcv, pAtrLen, &tv);
-	dbg_log("*pAtrLen: %d", *pAtrLen);
-	dbg_ba2s(g_rcv, *pAtrLen);
 	if (status != 0) {
+		*pAtrLen = 0;
 		dbg_log("send_receive failed! : 0x%X", status);
 		close_socket();
 		return status;
 	}
+	dbg_log("*pAtrLen: %d", *pAtrLen);
+	dbg_ba2s(g_rcv, *pAtrLen);
 
 	// first 4 byte of received data is header.
-	// 00 00 00 0F 3B E6 00 FF 81 31 FE 45 4A 43 4F 50 32 30 06
+	// 0000000F 3BE600FF8131FE454A434F50323006
 	*pAtrLen -= 4;
 	memcpy(pAtr, g_rcv + 4, *pAtrLen);	// copy data from payload.
 
@@ -251,8 +252,8 @@ int JCOP_SIMUL_transmit(
 	}
 
 	// first 4 byte of received data is header.
-	// 01 00 00 02 90 00
-	// 01 00 00 1D 6F 19 84 08 A0 00 00 00 03 00 00 00 A5 0D 9F 6E 06 40 51 40 36 20 17 9F 65 01 FF 90 00
+	// 01000002 9000
+	// 0100001D 6F198408A000000003000000A50D9F6E064051403620179F6501FF9000
 	*pRcvLen -= 4;
 	memcpy(pRcv, g_rcv + 4, *pRcvLen);	// copy data from payload.
 

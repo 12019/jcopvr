@@ -46,4 +46,8 @@ typedef struct _JCOP_PROXY_SHARED_EVENTS {
 #define JCOP_PROXY_BUFFER_SIZE 1024
 #define JCOP_PROXY_MAX_ATR_SIZE 33
 
+// I don't know how to resize Smartcard resource manager's IFSD to 0xFE...
+//#define MAX_IFS 0xFE
+#define MAX_IFS 0x93
+
 #endif // __SHARED_DATA__
