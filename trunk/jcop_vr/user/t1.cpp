@@ -1,5 +1,5 @@
 /*
- * $Id:$
+ * $Id$
  */
 
 /*
@@ -48,11 +48,11 @@
 
 #define PCB_S_CARD	0x20
 
-static bool g_isSndChained = false;
+static bool g_isSndChaining = false;
 static char g_sndBuf[JCOP_PROXY_BUFFER_SIZE];
 static int g_sndBufOff = 0;
 
-static bool g_isRcvChained = false;
+static bool g_isRcvChaining = false;
 static char g_rcvBuf[JCOP_PROXY_BUFFER_SIZE];
 static int g_rcvBufOff = -1;
 static int g_rcvBufLen = -1;
@@ -122,7 +122,7 @@ int T1_processMsg(
 		return 0;
 	}
 
-	if (g_isRcvChained) {
+	if (g_isRcvChaining) {
 
 		if ((pcb & 0xC0) != 0x80) {
 			// Not R-block (I-block)..
@@ -136,6 +136,7 @@ int T1_processMsg(
 		unsigned char rSeq = 0x00;
 		if ((pcb & PCB_R_SEQ) == PCB_R_SEQ) {
 			// set sequence bit.
+			// mirror sequence bit.
 			rSeq = PCB_I_SEQ;
 		}
 		if (remain > IFS) {
@@ -146,7 +147,7 @@ int T1_processMsg(
 		} else {
 			// I-block resp chaining end.
 			*pRcvLen = createT1Msg(pRcv, nad, (0x00 | rSeq), (remain & 0x00FF), &g_rcvBuf[g_rcvBufOff]);
-			g_isRcvChained = false;
+			g_isRcvChaining = false;
 			g_rcvBufOff = -1;
 			g_rcvBufLen = -1;
 		}
@@ -170,7 +171,7 @@ int T1_processMsg(
 
 		if ((pcb & PCB_I_MORE) == PCB_I_MORE) {
 			// PCB has a MORE bit.
-			g_isSndChained = true;
+			g_isSndChaining = true;
 
 			unsigned char rSeq = 0x00;
 			if ((pcb & PCB_I_SEQ) != PCB_I_SEQ) {
@@ -199,15 +200,21 @@ int T1_processMsg(
 		dbg_ba2s(pSnd, g_sndBufOff);
 		unsigned short respLen = *pRcvLen;
 		// send command to JCOP simulator.
-		status = JCOP_SIMUL_transmit(pSnd, len, &pRcv[3], &respLen);
+		status = JCOP_SIMUL_transmit(pSnd, g_sndBufOff + 4, &pRcv[3], &respLen);
 		dbg_log("JCOP_SIMUL_transmit end with code %d", status);
 		if (status != JCOP_SIMUL_NO_ERROR) {
 			dbg_log("JCOP_SIMUL_transmit failed! - status: 0x%08X", status);
 			return status;
 		}
 
+		if (g_isSndChaining) {
+			// set sequence bit.
+			// invert sequence bit.
+			pcb ^= PCB_I_SEQ;
+		}
+
 		// I-block req chaining end.
-		g_isSndChained = false;
+		g_isSndChaining = false;
 		g_sndBufOff = 0;
 
 		if (respLen < IFS) {
@@ -216,7 +223,7 @@ int T1_processMsg(
 		} else {
 			// I-block resp chaining start.
 			memcpy(g_rcvBuf, &pRcv[3], respLen);
-			g_isRcvChained = true;
+			g_isRcvChaining = true;
 			g_rcvBufOff = IFS;
 			g_rcvBufLen = respLen;
 			*pRcvLen = createT1Msg(pRcv, nad, (pcb | PCB_I_MORE), IFS, &pRcv[3]);
