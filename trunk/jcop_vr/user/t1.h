@@ -32,7 +32,13 @@
 #ifndef __T1__
 #define __T1__
 
-int T1_processMsg(char *const pSnd, const unsigned short sndLen, char *const pRcv, unsigned short *const pRcvLen);
+void T1_resetSeq();
+int T1_processMsg(
+    char *const pSnd,
+    const unsigned short sndLen,
+    char *const pRcv,
+    unsigned short *const pRcvLen
+);
 
 #endif // __T1__
 

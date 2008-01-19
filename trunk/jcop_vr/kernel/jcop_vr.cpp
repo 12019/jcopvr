@@ -837,8 +837,7 @@ static NTSTATUS createReaderDevice(IN PDEVICE_OBJECT pDeviceObject, IN PUNICODE_
 	pSmartcardExtension->ReaderCapabilities.CLKFrequency.Max = 3580;
 	pSmartcardExtension->ReaderCapabilities.DataRate.Default = 9600;
 	pSmartcardExtension->ReaderCapabilities.DataRate.Max = 9600;
-	//pSmartcardExtension->ReaderCapabilities.MaxIFSD = 0xFE;
-	pSmartcardExtension->ReaderCapabilities.MaxIFSD = 0x93;
+	pSmartcardExtension->ReaderCapabilities.MaxIFSD = MAX_IFS;
 
 	// invoke SmartcardInitialize
 	pSmartcardExtension->Version = SMCLIB_VERSION;
