@@ -1,30 +1,36 @@
 Title   :  JCOP Simulation Virtual Reader Driver
 Author  :  Kenichi Kanai
-Version :  0.1.0
+Version :  0.2.0
 License :  MIT License, see LICENSE
 Requires:  Windows 2000
 
-  This driver is a Windows version of JCOP Simulation ifdhandler (see JPCSC[1] 
-  for more information). It enables your PC/SC client software on Windows 2000 
-  to talk with the JCOP simulator executing JavaCard applet debug process. 
+  This driver is a Windows version of the JCOP Simulation ifdhandler (see
+  JPCSC [1] for more information). It enables your PC/SC client software
+  on Windows 2000 to talk with the JCOP simulator executing JavaCard applet
+  debug process. 
 
 Files:
 ======
   1. jcop_vr.sys: kernel-mode driver.
   2. jcop_proxy.exe: user-mode application.
 
-  As it seems to be difficult to invoke socket function (or TDI function) from 
-  kernel-mode driver, the user-mode application invokes the Winsock function to 
-  mediate interaction between the kernel-mode driver and the JCOP simulator. 
+  As it seems to be difficult for me to invoke socket function (or TDI 
+  function) from kernel-mode driver, the user-mode application invokes the
+  Winsock function to mediate interaction between the kernel-mode driver
+  and the JCOP simulator. 
 
 Notice:
 =======
-
-  * Only supports Windows 2000: This driver is developped as a legacy smart card
-  driver and needs help of Smart Card Helper service which has been deprecated from
-  WinXP SP2. 
-  * Only supports T=0: This driver does not parse ATR and always says "select T=0
-  Protocol". 
+  * Works only for Windows 2000: This driver is developped as a legacy 
+  smart card driver and needs help of Smart Card Helper service which has
+  been deprecated from WinXP SP2. 
+  * T=1 is not fully supported: As this driver is a virtual driver, it has
+  minimal error free operations. No error detection and correction are 
+  implemented.
+  * No warranty: This software is provided on an "AS IS" basis and without
+  any warranty. This software includes a kernel-mode driver and may induce
+  blue screen (or damage your system), but you are solely responsible for
+  determining the appropriateness of using this software.
 
 Installation & usage:
 =====================
@@ -33,33 +39,31 @@ Installation & usage:
   1. Install jcop_vr.sys. I usually use DIP.exe provided at [2]. 
   2. Execute Eclipse or JCOP Tools. 
   3. Set some break points in your JavaCard Applet and invoke JCOP debugger. 
-  4. After successfully installed your applet, type "/close" in JCOP Shell window
-  to close JCOP Shell session. Otherwise, you can not connect to JCOP simulation
-  socket server. 
+  4. After successfully installed your applet, type "/close" in JCOP Shell
+  window to close JCOP Shell session. Otherwise, you can not connect to 
+  JCOP simulation socket server. 
   5. Execute jcop_proxy.exe. 
-  6. Open service in control panel, select "Smart Card" service (not "Smart Card
-  Helper" service) and restart it. 
+  6. Open service in control panel, select "Smart Card" service (not "Smart
+  Card Helper" service) and restart it. 
   7. Execute your own PC/SC application and invoke some commands. 
-  8. You may need some reboot to make this drivper work properly. For example, if
-  you have uninstalled this driver, you need to restart your pc before the next 
-  installation. 
 
-  * You may need some reboot to make this drivper work properly. For example, if
-  you have uninstalled this driver, you need to restart your pc before the next 
-  installation. 
+  * You may need some reboot to make this drivper work properly. For 
+  example, if you have uninstalled this driver, you need to restart your
+  pc before the next  installation. 
   
 Compilation:
 ============
  You need "Windows Server 2003 SP1 DDK" to build these modules. 
 
   jcop_vr.sys
-    1. Invoke "Windows 2000 Checked Build Environment". After you have successfully
-    installed DDK, you can find it "start->programs->Development Kits->Windows DDK
-    3790.1830->Build Environments->Windows 2000->Windows 2000 Checked Build 
+    1. Invoke "Windows 2000 Checked Build Environment". After you have 
+    successfully installed DDK, you can find it "
+    start->programs->Development Kits->Windows DDK 3790.1830->Build 
+    Environments->Windows 2000->Windows 2000 Checked Build 
     Environment". 
     2. Change directory to (somewhere you download source)\jcop_vr\kernel. 
     3. Input "build". 
-    4. You will find newly build jcop_vr.sys under (somewhere you download 
+    4. You will find newly build jcop_vr.sys under (somewhere you download
     source)\jcop_vr\kernel\objchk_w2k_x86\i386 directory. 
 
   jcop_proxy.exe
@@ -67,10 +71,10 @@ Compilation:
     1. Invoke "Windows 2000 Checked Build Environment". 
     2. Change directory to (somewhere you download source)\jcop_vr\user. 
     3. Input "build". 
-    4. You will find newly build jcop_proxy.exe under (somewhere you download 
-    source)\jcop_vr\user\objchk_w2k_x86\i386 directory. 
+    4. You will find newly build jcop_proxy.exe under (somewhere you 
+    download source)\jcop_vr\user\objchk_w2k_x86\i386 directory. 
 
-Links:
+Reference:
 ======
 [1] JPCSC http://www.musclecard.com/middle.html
 [2] Windows Device Driver Programming Part 1 (Japanese)
@@ -78,5 +82,10 @@ Links:
 
 History:
 ========
+0.2.0 - 2008-01-20  Kenichi Kanai
+	* Minimal T=1 operations suppoeted.
+
 0.1.0 - 2008-01-14  Kenichi Kanai
 	* initial version.
+
+$Id$
