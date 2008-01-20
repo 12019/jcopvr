@@ -651,7 +651,6 @@ NTSTATUS VR_RDF_Transmit(IN PSMARTCARD_EXTENSION pSmartcardExtension)
 			break;
 		case SCARD_PROTOCOL_T1 :
 			dbg_log("SCARD_PROTOCOL_T1");
-			//status = STATUS_INVALID_DEVICE_REQUEST;
 			status = transmitT1(pSmartcardExtension);
 			break;
 		case SCARD_PROTOCOL_RAW :
