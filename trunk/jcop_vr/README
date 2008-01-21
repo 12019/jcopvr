@@ -14,23 +14,23 @@ Files:
   1. jcop_vr.sys: kernel-mode driver.
   2. jcop_proxy.exe: user-mode application.
 
-  As it seems to be difficult for me to invoke socket function (or TDI 
-  function) from kernel-mode driver, the user-mode application invokes the
-  Winsock function to mediate interaction between the kernel-mode driver
-  and the JCOP simulator. 
+  As it seems to be difficult for me to invoke socket functions (or TDI 
+  functions) from a kernel-mode driver, the user-mode application invokes
+  Winsock functions to mediate interaction between the kernel-mode driver
+  and the JCOP simulator.
 
 Notice:
 =======
   * Works only for Windows 2000: This driver is developped as a legacy 
-  smart card driver and needs help of Smart Card Helper service which has
-  been deprecated from WinXP SP2. 
+  smart card driver and needs a help of Smart Card Helper service which 
+  has been deprecated from Windows XP SP2. 
   * T=1 is not fully supported: As this driver is a virtual driver, it has
   minimal error free operations. No error detection and correction are 
   implemented.
   * No warranty: This software is provided on an "AS IS" basis and without
   any warranty. This software includes a kernel-mode driver and may induce
-  blue screen (or damage your system), but you are solely responsible for
-  determining the appropriateness of using this software.
+  a Blue Screen of Death (or damage your system), but you are solely 
+  responsible for determining the appropriateness of using this software.
 
 Installation & usage:
 =====================
@@ -63,7 +63,7 @@ Compilation:
     Environment". 
     2. Change directory to (somewhere you download source)\jcop_vr\kernel. 
     3. Input "build". 
-    4. You will find newly build jcop_vr.sys under (somewhere you download
+    4. You will a find newly built jcop_vr.sys under (somewhere you download
     source)\jcop_vr\kernel\objchk_w2k_x86\i386 directory. 
 
   jcop_proxy.exe
@@ -71,7 +71,7 @@ Compilation:
     1. Invoke "Windows 2000 Checked Build Environment". 
     2. Change directory to (somewhere you download source)\jcop_vr\user. 
     3. Input "build". 
-    4. You will find newly build jcop_proxy.exe under (somewhere you 
+    4. You will find a newly built jcop_proxy.exe under (somewhere you 
     download source)\jcop_vr\user\objchk_w2k_x86\i386 directory. 
 
 Reference:
