@@ -42,6 +42,26 @@ static char g_rcv[JCOP_PROXY_BUFFER_SIZE];
 static JCOP_PROXY_SHARED_EVENTS g_events;
 static HANDLE g_hFile;
 
+static void finalize(void)
+{
+	dbg_log("JCOP_SIMUL_close()");
+	JCOP_SIMUL_close();
+
+	if (g_events.hEventRcv != INVALID_HANDLE_VALUE) {
+		dbg_log("CloseHandle(g_events.hEventRcv)");
+		CloseHandle(g_events.hEventRcv);
+	}
+
+	if (g_events.hEventSnd != INVALID_HANDLE_VALUE) {
+		dbg_log("CloseHandle(g_events.hEventSnd)");
+		CloseHandle(g_events.hEventSnd);
+	}
+
+	dbg_log("CloseHandle(g_hFile)");
+	CloseHandle(g_hFile);
+	dbg_log("CloseHandle(g_hFile): end");
+}
+
 static BOOL WINAPI handler(DWORD const ctrl)
 {
 	switch (ctrl) {
@@ -50,24 +70,9 @@ static BOOL WINAPI handler(DWORD const ctrl)
 		case CTRL_CLOSE_EVENT:
 		case CTRL_LOGOFF_EVENT:
 		case CTRL_SHUTDOWN_EVENT:
-			dbg_log("JCOP_SIMUL_close()");
-			JCOP_SIMUL_close();
-
-			if (g_events.hEventRcv != INVALID_HANDLE_VALUE) {
-				dbg_log("CloseHandle(g_events.hEventRcv)");
-				CloseHandle(g_events.hEventRcv);
-			}
-
-			if (g_events.hEventSnd != INVALID_HANDLE_VALUE) {
-				dbg_log("CloseHandle(g_events.hEventSnd)");
-				CloseHandle(g_events.hEventSnd);
-			}
-
-			dbg_log("CloseHandle(g_hFile)");
-			CloseHandle(g_hFile);
-			dbg_log("CloseHandle(g_hFile): end");
+			finalize();
 			return FALSE;
-		default: 
+		default:
 			break;
 	}
 	return TRUE;
@@ -88,15 +93,17 @@ int __cdecl main(int argc, char* argv[])
 	g_events.hEventRcv = CreateEvent(NULL, FALSE, FALSE, "JCopVRRcv");
 	if (g_events.hEventRcv == INVALID_HANDLE_VALUE) {
 		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
+		finalize();
 		return -1;
 	}
 
 	// read kernel-mode driver file.
 	g_hFile = CreateFile("\\\\.\\JCopVirtualReader",
-	                          GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	                     GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
 	if (g_hFile == INVALID_HANDLE_VALUE) {
 		dbg_log("CreateFile failed! - status: 0x%08X", GetLastError());
 		dbg_log("driver not installed properly.");
+		finalize();
 		return -1;
 	}
 
