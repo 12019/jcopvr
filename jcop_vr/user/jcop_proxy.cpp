@@ -29,6 +29,7 @@
  * \brief JCOP Proxy (user-mode application for JCOP Simulation Virtual Reader Driver) - Main Module.
  * \author Kenichi Kanai
  */
+
 #include <windows.h>
 
 #include "jcop_simul.h"
@@ -38,29 +39,62 @@
 
 static char g_snd[JCOP_PROXY_BUFFER_SIZE];
 static char g_rcv[JCOP_PROXY_BUFFER_SIZE];
+static JCOP_PROXY_SHARED_EVENTS g_events;
+static HANDLE g_hFile;
+
+static BOOL WINAPI handler(DWORD const ctrl)
+{
+	switch (ctrl) {
+		case CTRL_C_EVENT:
+		case CTRL_BREAK_EVENT:
+		case CTRL_CLOSE_EVENT:
+		case CTRL_LOGOFF_EVENT:
+		case CTRL_SHUTDOWN_EVENT:
+			dbg_log("JCOP_SIMUL_close()");
+			JCOP_SIMUL_close();
+
+			if (g_events.hEventRcv != INVALID_HANDLE_VALUE) {
+				dbg_log("CloseHandle(g_events.hEventRcv)");
+				CloseHandle(g_events.hEventRcv);
+			}
+
+			if (g_events.hEventSnd != INVALID_HANDLE_VALUE) {
+				dbg_log("CloseHandle(g_events.hEventSnd)");
+				CloseHandle(g_events.hEventSnd);
+			}
+
+			dbg_log("CloseHandle(g_hFile)");
+			CloseHandle(g_hFile);
+			dbg_log("CloseHandle(g_hFile): end");
+			return FALSE;
+		default: 
+			break;
+	}
+	return TRUE;
+}
 
 int __cdecl main(int argc, char* argv[])
 {
-	JCOP_PROXY_SHARED_EVENTS events;
+	::SetConsoleCtrlHandler(handler, TRUE);
 
 	// create event for sending data.
-	events.hEventSnd = CreateEvent(NULL, FALSE, FALSE, "JCopVRSnd");
-	if (events.hEventSnd == INVALID_HANDLE_VALUE) {
+	g_events.hEventSnd = CreateEvent(NULL, FALSE, FALSE, "JCopVRSnd");
+	if (g_events.hEventSnd == INVALID_HANDLE_VALUE) {
 		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
 		return -1;
 	}
 
 	// create event for receiving data.
-	events.hEventRcv = CreateEvent(NULL, FALSE, FALSE, "JCopVRRcv");
-	if (events.hEventRcv == INVALID_HANDLE_VALUE) {
+	g_events.hEventRcv = CreateEvent(NULL, FALSE, FALSE, "JCopVRRcv");
+	if (g_events.hEventRcv == INVALID_HANDLE_VALUE) {
 		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
 		return -1;
 	}
 
 	// read kernel-mode driver file.
-	HANDLE hFile = CreateFile("\\\\.\\JCopVirtualReader",
+	g_hFile = CreateFile("\\\\.\\JCopVirtualReader",
 	                          GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-	if (hFile == INVALID_HANDLE_VALUE) {
+	if (g_hFile == INVALID_HANDLE_VALUE) {
 		dbg_log("CreateFile failed! - status: 0x%08X", GetLastError());
 		dbg_log("driver not installed properly.");
 		return -1;
@@ -69,9 +103,9 @@ int __cdecl main(int argc, char* argv[])
 	// send IOCT_SET_EVENTS IO control code.
 	DWORD dwReturn;
 	BOOL bStatus = DeviceIoControl(
-	                   hFile,					// Handle to device
+	                   g_hFile,					// Handle to device
 	                   IOCTL_JCOP_PROXY_SET_EVENTS,		// IO Control code
-	                   &events,				// Input Buffer to driver.
+	                   &g_events,				// Input Buffer to driver.
 	                   sizeof(JCOP_PROXY_SHARED_EVENTS),	// Length of input buffer in bytes.
 	                   NULL,					// Output Buffer from driver.
 	                   0,						// Length of output buffer in bytes.
@@ -86,7 +120,7 @@ int __cdecl main(int argc, char* argv[])
 	while (true) {
 		// wait for event.
 		dbg_log("waiting for sending data event...");
-		DWORD status = WaitForSingleObject(events.hEventSnd, INFINITE);
+		DWORD status = WaitForSingleObject(g_events.hEventSnd, INFINITE);
 		if (status != WAIT_OBJECT_0) {
 			switch (status) {
 				case WAIT_ABANDONED :
@@ -106,7 +140,7 @@ int __cdecl main(int argc, char* argv[])
 		// read sending data from kernel-mode driver.
 		memset(g_snd, 0, sizeof(g_snd));
 		unsigned long dwRead = 0;
-		bStatus = ReadFile(hFile, g_snd, sizeof(g_snd), &dwRead, NULL);
+		bStatus = ReadFile(g_hFile, g_snd, sizeof(g_snd), &dwRead, NULL);
 		if (!bStatus) {
 			dbg_log("ReadFile failed! - status: 0x%08X", GetLastError());
 			continue;
@@ -173,7 +207,7 @@ int __cdecl main(int argc, char* argv[])
 		// write received data to kernel-mode driver.
 		dbg_ba2s(g_rcv, rcvLen);
 		DWORD dwWritten = 0;
-		bStatus = WriteFile(hFile, g_rcv, rcvLen, &dwWritten, NULL);
+		bStatus = WriteFile(g_hFile, g_rcv, rcvLen, &dwWritten, NULL);
 		if (!bStatus) {
 			dbg_log("WriteFile failed! - status: 0x%08X", GetLastError());
 			continue;
@@ -181,7 +215,7 @@ int __cdecl main(int argc, char* argv[])
 		dbg_log("%d bytes written", dwWritten);
 
 		// set event receiving data completed.
-		bStatus = SetEvent(events.hEventRcv);
+		bStatus = SetEvent(g_events.hEventRcv);
 		if (!bStatus) {
 			dbg_log("SetEvent failed! - status: 0x%08X", GetLastError());
 			continue;
@@ -189,19 +223,6 @@ int __cdecl main(int argc, char* argv[])
 		dbg_log("hEventRcv set.");
 	}
 
-	if (events.hEventRcv != INVALID_HANDLE_VALUE) {
-		dbg_log("CloseHandle(events.hEventRcv)");
-		CloseHandle(events.hEventRcv);
-	}
-
-	if (events.hEventSnd != INVALID_HANDLE_VALUE) {
-		dbg_log("CloseHandle(events.hEventSnd)");
-		CloseHandle(events.hEventSnd);
-	}
-
-	dbg_log("CloseHandle(hFile)");
-	CloseHandle(hFile);
-	dbg_log("CloseHandle(hFile): end");
 	return 0;
 }
 
