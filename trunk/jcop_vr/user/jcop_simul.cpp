@@ -172,13 +172,13 @@ static int send_receive(
  */
 int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
 {
-	if (g_socket != INVALID_SOCKET) {
-		close_socket();
-	}
+	int status;
 
-	int status = open_socket();
-	if (status != 0) {
-		return JCOP_SIMUL_ERROR_INITIALIZE;
+	if (g_socket == INVALID_SOCKET) {
+		status = open_socket();
+		if (status != 0) {
+			return JCOP_SIMUL_ERROR_INITIALIZE;
+		}
 	}
 
 	char pSnd[8];
@@ -195,7 +195,7 @@ int JCOP_SIMUL_powerUp(char *const pAtr, unsigned short *const pAtrLen)
 	// set duration to time out.
 	timeval tv;
 	tv.tv_sec = 0;	// 0sec.
-	tv.tv_usec = 0;
+	tv.tv_usec = 500000;	// 500msec.
 
 	status = send_receive(pSnd, sizeof(pSnd), g_rcv, pAtrLen, &tv);
 	if (status != 0) {
