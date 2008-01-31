@@ -32,6 +32,8 @@
 
 #include <windows.h>
 
+#include <stdio.h>
+
 #include "jcop_simul.h"
 #include "dbglog.h"
 #include "shared_data.h"
@@ -80,7 +82,7 @@ static BOOL WINAPI handler(DWORD const ctrl)
 
 int __cdecl main(int argc, char* argv[])
 {
-	::SetConsoleCtrlHandler(handler, TRUE);
+	SetConsoleCtrlHandler(handler, TRUE);
 
 	// create event for sending data.
 	g_events.hEventSnd = CreateEvent(NULL, FALSE, FALSE, "JCopVRSnd");
@@ -122,6 +124,26 @@ int __cdecl main(int argc, char* argv[])
 	if (!bStatus) {
 		dbg_log("Ioctl failed! - status: 0x%08X", GetLastError());
 		return -1;
+	}
+
+	// check if JCOP Tool is invoked.
+	while (true) {
+		dbg_log("MTY=0x00: Wait for card");
+		memset(g_rcv, 0, sizeof(g_rcv));
+		unsigned short rcvLen = sizeof(g_rcv);	// expected length
+		int status = JCOP_SIMUL_powerUp(g_rcv, &rcvLen);
+		dbg_log("JCOP_SIMUL_powerUp end with code %d", dwReturn);
+		if (status != JCOP_SIMUL_NO_ERROR) {
+			JCOP_SIMUL_close();
+			dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
+			printf("\n");
+			printf("JCOP Simulator seems not to be invoked!\n");
+			printf("invoke the JCOP Simulator and \"/close\" the JCOP Shell.\n");
+			printf("hit any key to continue.\n");
+			getchar();
+			continue;
+		}
+		break;
 	}
 
 	while (true) {
