@@ -1,6 +1,6 @@
 Title   :  JCOP Simulation Virtual Reader Driver
 Author  :  Kenichi Kanai
-Version :  0.2.0
+Version :  0.3.0
 License :  MIT License, see LICENSE
 Requires:  Windows 2000
 
@@ -42,10 +42,11 @@ Installation & usage:
   4. After successfully installed your applet, type "/close" in JCOP Shell
   window to close JCOP Shell session. Otherwise, you can not connect to 
   JCOP simulation socket server. 
-  5. Execute jcop_proxy.exe. 
+  5. Execute jcop_proxy.exe. Type "jcop_proxy start" in command prompt.
   6. Open service in control panel, select "Smart Card" service (not "Smart
   Card Helper" service) and restart it. 
   7. Execute your own PC/SC application and invoke some commands. 
+  8. To stop jcop_proxy.exe, type "jcop_proxy stop" in command prompt.
 
   * You may need some reboot to make this drivper work properly. For 
   example, if you have uninstalled this driver, you need to restart your
@@ -53,7 +54,7 @@ Installation & usage:
   
 Compilation:
 ============
- You need "Windows Server 2003 SP1 DDK" to build these modules. 
+ You need "Windows Server 2003 SP1 DDK" to build jcop_vr.sys. 
 
   jcop_vr.sys
     1. Invoke "Windows 2000 Checked Build Environment". After you have 
@@ -66,13 +67,11 @@ Compilation:
     4. You will a find newly built jcop_vr.sys under (somewhere you download
     source)\jcop_vr\kernel\objchk_w2k_x86\i386 directory. 
 
+ You need "Visual Studio .NET 2002" to build jcop_proxy.exe. 
+
   jcop_proxy.exe
-   It is almost same as building kernel-mode driver. 
-    1. Invoke "Windows 2000 Checked Build Environment". 
-    2. Change directory to (somewhere you download source)\jcop_vr\user. 
-    3. Input "build". 
-    4. You will find a newly built jcop_proxy.exe under (somewhere you 
-    download source)\jcop_vr\user\objchk_w2k_x86\i386 directory. 
+    It is a Visual Studio .NET 2002 solusion. Open the solution with your
+    Visual Studio and build it.
 
 Reference:
 ======
@@ -82,10 +81,13 @@ Reference:
 
 History:
 ========
+0.3.0 - 2008-02-04  Kenichi Kanai
+	* Make jcop_proxy.exe work as a background process.
+
 0.2.0 - 2008-01-20  Kenichi Kanai
 	* Minimal T=1 operations supported.
 
 0.1.0 - 2008-01-14  Kenichi Kanai
-	* initial version.
+	* Initial version.
 
 $Id$
