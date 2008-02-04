@@ -29,34 +29,49 @@
  * \brief JCOP Proxy (user-mode application for JCOP Simulation Virtual Reader Driver) - Main Module.
  * \author Kenichi Kanai
  */
-
 #include <windows.h>
-
+#include <tchar.h>
 #include <stdio.h>
 
-#include "jcop_simul.h"
-#include "dbglog.h"
 #include "shared_data.h"
+#include "jcop_simul.h"
 #include "t1.h"
+#include "dbglog.h"
 
 static char g_snd[JCOP_PROXY_BUFFER_SIZE];
 static char g_rcv[JCOP_PROXY_BUFFER_SIZE];
 static JCOP_PROXY_SHARED_EVENTS g_events;
 static HANDLE g_hFile;
+static HANDLE g_eventStop = NULL;
 
-static void finalize(void)
+static void err_msg(char const *const pFmt, ...)
 {
-	dbg_log("JCOP_SIMUL_close()");
-	JCOP_SIMUL_close();
+	va_list argList;
+	va_start(argList, pFmt);
+	TCHAR sz[1024];
+	_vstprintf(sz, pFmt, argList);
+	va_end(argList);
 
-	if (g_events.hEventRcv != INVALID_HANDLE_VALUE) {
+	MessageBox(
+	    NULL,
+	    sz,
+	    _T("jcop_proxy"),
+	    (MB_OK | MB_ICONWARNING)
+	);
+}
+
+static void finalize_driver(void)
+{
+	if (g_events.hEventRcv != NULL) {
 		dbg_log("CloseHandle(g_events.hEventRcv)");
 		CloseHandle(g_events.hEventRcv);
+		g_events.hEventRcv = NULL;
 	}
 
-	if (g_events.hEventSnd != INVALID_HANDLE_VALUE) {
+	if (g_events.hEventSnd != NULL) {
 		dbg_log("CloseHandle(g_events.hEventSnd)");
 		CloseHandle(g_events.hEventSnd);
+		g_events.hEventRcv = NULL;
 	}
 
 	dbg_log("CloseHandle(g_hFile)");
@@ -64,94 +79,37 @@ static void finalize(void)
 	dbg_log("CloseHandle(g_hFile): end");
 }
 
-static BOOL WINAPI handler(DWORD const ctrl)
+static void finalize(void)
 {
-	switch (ctrl) {
-		case CTRL_C_EVENT:
-		case CTRL_BREAK_EVENT:
-		case CTRL_CLOSE_EVENT:
-		case CTRL_LOGOFF_EVENT:
-		case CTRL_SHUTDOWN_EVENT:
-			finalize();
-			return FALSE;
-		default:
-			break;
+	// set event receiving data completed.
+	if (g_eventStop != NULL) {
+		SetEvent(g_eventStop);
+		CloseHandle(g_eventStop);
+		g_eventStop = NULL;
 	}
-	return TRUE;
+
+	dbg_log("JCOP_SIMUL_close()");
+	JCOP_SIMUL_close();
+
+	finalize_driver();
 }
 
-int __cdecl main(int argc, char* argv[])
+static int loop(void)
 {
-	SetConsoleCtrlHandler(handler, TRUE);
-
-	// create event for sending data.
-	g_events.hEventSnd = CreateEvent(NULL, FALSE, FALSE, "JCopVRSnd");
-	if (g_events.hEventSnd == INVALID_HANDLE_VALUE) {
-		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
-		return -1;
-	}
-
-	// create event for receiving data.
-	g_events.hEventRcv = CreateEvent(NULL, FALSE, FALSE, "JCopVRRcv");
-	if (g_events.hEventRcv == INVALID_HANDLE_VALUE) {
-		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
-		finalize();
-		return -1;
-	}
-
-	// read kernel-mode driver file.
-	g_hFile = CreateFile("\\\\.\\JCopVirtualReader",
-	                     GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
-	if (g_hFile == INVALID_HANDLE_VALUE) {
-		dbg_log("CreateFile failed! - status: 0x%08X", GetLastError());
-		dbg_log("driver not installed properly.");
-		finalize();
-		return -1;
-	}
-
-	// send IOCT_SET_EVENTS IO control code.
-	DWORD dwReturn;
-	BOOL bStatus = DeviceIoControl(
-	                   g_hFile,					// Handle to device
-	                   IOCTL_JCOP_PROXY_SET_EVENTS,		// IO Control code
-	                   &g_events,				// Input Buffer to driver.
-	                   sizeof(JCOP_PROXY_SHARED_EVENTS),	// Length of input buffer in bytes.
-	                   NULL,					// Output Buffer from driver.
-	                   0,						// Length of output buffer in bytes.
-	                   &dwReturn,				// Bytes placed in buffer.
-	                   NULL					// synchronous call
-	               );
-	if (!bStatus) {
-		dbg_log("Ioctl failed! - status: 0x%08X", GetLastError());
-		return -1;
-	}
-
-	// check if JCOP Tool is invoked.
-	while (true) {
-		dbg_log("MTY=0x00: Wait for card");
-		memset(g_rcv, 0, sizeof(g_rcv));
-		unsigned short rcvLen = sizeof(g_rcv);	// expected length
-		int status = JCOP_SIMUL_powerUp(g_rcv, &rcvLen);
-		dbg_log("JCOP_SIMUL_powerUp end with code %d", dwReturn);
-		if (status != JCOP_SIMUL_NO_ERROR) {
-			JCOP_SIMUL_close();
-			dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
-			printf("\n");
-			printf("JCOP Simulator seems not to be invoked!\n");
-			printf("invoke the JCOP Simulator and \"/close\" the JCOP Shell.\n");
-			printf("hit any key to continue.\n");
-			getchar();
-			continue;
-		}
-		break;
-	}
 
 	while (true) {
 		// wait for event.
 		dbg_log("waiting for sending data event...");
-		DWORD status = WaitForSingleObject(g_events.hEventSnd, INFINITE);
+		HANDLE handles[2];
+		handles[0] = g_events.hEventSnd;	// WAIT_OBJECT_0
+		handles[1] = g_eventStop;	// WAIT_OBJECT_0 + 1
+		DWORD status = WaitForMultipleObjects(2, handles, FALSE, INFINITE);
 		if (status != WAIT_OBJECT_0) {
 			switch (status) {
+				case WAIT_OBJECT_0 + 1 :
+					// Stoping thread event is set.
+					dbg_log("WAIT_OBJECT_0 + 1");
+					return 0;
 				case WAIT_ABANDONED :
 					dbg_log("WAIT_ABANDONED");
 					break;
@@ -169,7 +127,7 @@ int __cdecl main(int argc, char* argv[])
 		// read sending data from kernel-mode driver.
 		memset(g_snd, 0, sizeof(g_snd));
 		unsigned long dwRead = 0;
-		bStatus = ReadFile(g_hFile, g_snd, sizeof(g_snd), &dwRead, NULL);
+		BOOL bStatus = ReadFile(g_hFile, g_snd, sizeof(g_snd), &dwRead, NULL);
 		if (!bStatus) {
 			dbg_log("ReadFile failed! - status: 0x%08X", GetLastError());
 			continue;
@@ -190,7 +148,7 @@ int __cdecl main(int argc, char* argv[])
 				memset(g_rcv, 0, sizeof(g_rcv));
 				rcvLen = sizeof(g_rcv);	// expected length
 				status = JCOP_SIMUL_powerUp(g_rcv, &rcvLen);
-				dbg_log("JCOP_SIMUL_powerUp end with code %d", dwReturn);
+				dbg_log("JCOP_SIMUL_powerUp end with code %d", status);
 				if (status != JCOP_SIMUL_NO_ERROR) {
 					dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
 					continue;
@@ -255,3 +213,147 @@ int __cdecl main(int argc, char* argv[])
 	return 0;
 }
 
+static int initialize_jcop(void)
+{
+	memset(g_rcv, 0, sizeof(g_rcv));
+	unsigned short rcvLen = sizeof(g_rcv);	// expected length
+	int status = JCOP_SIMUL_powerUp(g_rcv, &rcvLen);
+	dbg_log("JCOP_SIMUL_powerUp end with code %d", status);
+	if (status != JCOP_SIMUL_NO_ERROR) {
+		JCOP_SIMUL_close();
+		dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", status);
+		return -1;
+	}
+
+	return 0;
+}
+
+static int initialize_driver(void)
+{
+	// create event for sending data.
+	g_events.hEventSnd = CreateEvent(NULL, FALSE, FALSE, "JCopVRSnd");
+	if (g_events.hEventSnd == NULL) {
+		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
+		return -1;
+	}
+
+	// create event for receiving data.
+	g_events.hEventRcv = CreateEvent(NULL, FALSE, FALSE, "JCopVRRcv");
+	if (g_events.hEventRcv == NULL) {
+		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
+		finalize_driver();
+		return -1;
+	}
+
+	// read kernel-mode driver file.
+	g_hFile = CreateFile("\\\\.\\JCopVirtualReader",
+	                     GENERIC_READ | GENERIC_WRITE, 0, NULL, OPEN_EXISTING, 0, NULL);
+	if (g_hFile == INVALID_HANDLE_VALUE) {
+		dbg_log("CreateFile failed! - status: 0x%08X", GetLastError());
+		finalize_driver();
+		return -1;
+	}
+
+	// send IOCT_SET_EVENTS IO control code.
+	DWORD dwReturn;
+	BOOL bStatus = DeviceIoControl(
+	                   g_hFile,					// Handle to device
+	                   IOCTL_JCOP_PROXY_SET_EVENTS,		// IO Control code
+	                   &g_events,				// Input Buffer to driver.
+	                   sizeof(JCOP_PROXY_SHARED_EVENTS),	// Length of input buffer in bytes.
+	                   NULL,					// Output Buffer from driver.
+	                   0,						// Length of output buffer in bytes.
+	                   &dwReturn,				// Bytes placed in buffer.
+	                   NULL					// synchronous call
+	               );
+	if (!bStatus) {
+		dbg_log("Ioctl failed! - status: 0x%08X", GetLastError());
+		finalize_driver();
+		return -1;
+	}
+
+	return 0;
+}
+
+static int initialize(void)
+{
+	g_eventStop = CreateEvent(NULL, FALSE, FALSE, "JCopProxyStopThread");
+	if (g_eventStop == INVALID_HANDLE_VALUE) {
+		dbg_log("CreateEvent failed! - status: 0x%08X", GetLastError());
+		err_msg("CreateEvent failed!");
+		return -1;
+	}
+
+	int status;
+
+	// Driver File
+	status = initialize_driver();
+	if (status != 0) {
+		err_msg("the driver file (jcop_vr.sys) is not installed properly.");
+		return -1;
+	}
+
+	// JCOP Simulator
+	status = initialize_jcop();
+	if (status != 0) {
+		err_msg("JCOP Simulator seems not to be invoked!\ninvoke the JCOP Simulator and \"/close\" the JCOP Shell.");
+		return -1;
+	}
+
+	return 0;
+}
+
+int APIENTRY _tWinMain(HINSTANCE hInstance,
+                       HINSTANCE hPrevInstance,
+                       LPTSTR    lpCmdLine,
+                       int       nCmdShow)
+{
+
+	if (_tcscmp(lpCmdLine, _T("")) == 0) {
+		err_msg("usage: jcop_proxy <start|stop>");
+		return -1;
+
+	} else if (_tcscmp(lpCmdLine, _T("start")) == 0) {
+
+		HANDLE ev = OpenEvent(EVENT_MODIFY_STATE, FALSE, "JCopProxyStopThread");
+		if (ev != NULL) {
+			err_msg("jcop_proxy is already started!");
+			return -1;
+		}
+		int status = initialize();
+		if (status != 0) {
+			return status;
+		}
+		MessageBox(
+		    NULL,
+		    _T("jcop_proxy successfully invoked.\ndon't forget to restart 'Smart Card' service."),
+		    _T("jcop_proxy"),
+		    (MB_OK | MB_ICONINFORMATION)
+		);
+		status = loop();
+		finalize();
+		if (status != 0) {
+			return status;
+		}
+		MessageBox(
+		    NULL,
+		    _T("jcop_proxy is successfully stopped."),
+		    _T("jcop_proxy"),
+		    (MB_OK | MB_ICONINFORMATION)
+		);
+		return 0;
+
+	} else if (_tcscmp(lpCmdLine, _T("stop")) == 0) {
+
+		HANDLE ev = OpenEvent(EVENT_MODIFY_STATE, FALSE, "JCopProxyStopThread");
+		if (ev == NULL) {
+			err_msg("jcop_proxy is already stopped!");
+			return -1;
+		}
+		SetEvent(ev);
+		return 0;
+
+	}
+
+	return 0;
+}
