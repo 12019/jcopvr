@@ -157,7 +157,26 @@ static int send_receive(
 	dbg_log("%d bytes Received.", n);
 	dbg_ba2s(pRcv, n);
 
-	*pRcvLen = (unsigned short)n;
+	int total = ((pRcv[2] & 0xff) << 8) + (pRcv[3] & 0xff) + 4;
+	unsigned short receivedLen = n;
+
+	while (receivedLen < total) {
+		expectedLen = total - receivedLen;
+		n = recv(g_socket, pRcv + receivedLen, expectedLen, 0);
+		if (n < 0) {
+			dbg_log("recv failed!: 0x%08X", WSAGetLastError());
+			close_socket();
+			return JCOP_SIMUL_ERROR_OTHER;
+		}
+		if (n == 0) {
+			break;
+		}
+		receivedLen += n;
+	}
+	dbg_log("%d bytes Received.", receivedLen);
+	dbg_ba2s(pRcv, receivedLen);
+
+	*pRcvLen = receivedLen;
 	return JCOP_SIMUL_NO_ERROR;
 }
 
