@@ -21,7 +21,7 @@ Files:
 
 Notice:
 =======
-  * Works only for Windows 2000: This driver is developped as a legacy 
+  * Works only for Windows 2000: This driver is developed as a legacy 
   smart card driver and needs a help of Smart Card Helper service which 
   has been deprecated from Windows XP SP2. 
   * T=1 is not fully supported: As this driver is a virtual driver, it has
@@ -48,15 +48,16 @@ Installation & usage:
   7. Execute your own PC/SC application and invoke some commands. 
   8. To stop jcop_proxy.exe, type "jcop_proxy stop" in command prompt.
 
-  * You may need some reboot to make this drivper work properly. For 
+  * You may need some reboot to make this driver work properly. For 
   example, if you have uninstalled this driver, you need to restart your
-  pc before the next  installation. 
+  pc before the next installation. 
   
 Compilation:
 ============
- You need "Windows Server 2003 SP1 DDK" to build jcop_vr.sys. 
 
   jcop_vr.sys
+    You need "Windows Server 2003 SP1 DDK" to build jcop_vr.sys. 
+
     1. Invoke "Windows 2000 Checked Build Environment". After you have 
     successfully installed DDK, you can find it "
     start->programs->Development Kits->Windows DDK 3790.1830->Build 
@@ -67,10 +68,8 @@ Compilation:
     4. You will a find newly built jcop_vr.sys under (somewhere you download
     source)\jcop_vr\kernel\objchk_w2k_x86\i386 directory. 
 
- You need "Visual Studio .NET 2002" to build jcop_proxy.exe. 
-
   jcop_proxy.exe
-    It is a Visual Studio .NET 2002 solusion. Open the solution with your
+    It is a Visual Studio .NET 2002 solution. Open the solution with your
     Visual Studio and build it.
 
 Reference:

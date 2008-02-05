@@ -129,13 +129,13 @@ static int loop(void)
 		unsigned long dwRead = 0;
 		BOOL bStatus = ReadFile(g_hFile, g_snd, sizeof(g_snd), &dwRead, NULL);
 		if (!bStatus) {
-			dbg_log("ReadFile failed! - status: 0x%08X", GetLastError());
+			err_msg("ReadFile failed! - status: 0x%08X", GetLastError());
 			continue;
 		}
 		dbg_log("%d bytes read", dwRead);
 		dbg_ba2s(g_snd, dwRead);
 		if (dwRead > 0xFFFF) {
-			dbg_log("dwRead > 0xFFFF");
+			err_msg("dwRead > 0xFFFF");
 			continue;
 		}
 
@@ -150,7 +150,7 @@ static int loop(void)
 				status = JCOP_SIMUL_powerUp(g_rcv, &rcvLen);
 				dbg_log("JCOP_SIMUL_powerUp end with code %d", status);
 				if (status != JCOP_SIMUL_NO_ERROR) {
-					dbg_log("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
+					err_msg("JCOP_SIMUL_powerUp failed! - status: 0x%08X", GetLastError());
 					continue;
 				}
 				// reset Card sequence No.
@@ -163,7 +163,7 @@ static int loop(void)
 				status = JCOP_SIMUL_transmit(g_snd, (unsigned short)dwRead, g_rcv, &rcvLen);
 				dbg_log("JCOP_SIMUL_transmit end with code %d", status);
 				if (status != JCOP_SIMUL_NO_ERROR) {
-					dbg_log("JCOP_SIMUL_transmit failed! - status: 0x%08X", status);
+					err_msg("JCOP_SIMUL_transmit failed! - status: 0x%08X", status);
 					continue;
 				}
 				break;
@@ -175,7 +175,7 @@ static int loop(void)
 				status = T1_processMsg(g_snd, (unsigned short)dwRead, g_rcv, &rcvLen);
 				dbg_log("T1_processMsg end with code %d", status);
 				if (status != 0) {
-					dbg_log("T1_processMsg failed! - status: 0x%08X", status);
+					err_msg("T1_processMsg failed! - status: 0x%08X", status);
 					continue;
 				}
 				break;
@@ -196,7 +196,7 @@ static int loop(void)
 		DWORD dwWritten = 0;
 		bStatus = WriteFile(g_hFile, g_rcv, rcvLen, &dwWritten, NULL);
 		if (!bStatus) {
-			dbg_log("WriteFile failed! - status: 0x%08X", GetLastError());
+			err_msg("WriteFile failed! - status: 0x%08X", GetLastError());
 			continue;
 		}
 		dbg_log("%d bytes written", dwWritten);
@@ -204,7 +204,7 @@ static int loop(void)
 		// set event receiving data completed.
 		bStatus = SetEvent(g_events.hEventRcv);
 		if (!bStatus) {
-			dbg_log("SetEvent failed! - status: 0x%08X", GetLastError());
+			err_msg("SetEvent failed! - status: 0x%08X", GetLastError());
 			continue;
 		}
 		dbg_log("hEventRcv set.");
@@ -333,6 +333,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		status = loop();
 		finalize();
 		if (status != 0) {
+			err_msg("loop() failed! - status: 0x%08X", status);
 			return status;
 		}
 		MessageBox(
