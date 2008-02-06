@@ -1,13 +1,13 @@
 Title   :  JCOP Simulation Virtual Reader Driver
 Author  :  Kenichi Kanai
-Version :  0.3.0
+Version :  0.3.1
 License :  MIT License, see LICENSE
 Requires:  Windows 2000
 
   This driver is a Windows version of the JCOP Simulation ifdhandler (see
   JPCSC [1] for more information). It enables your PC/SC client software
   on Windows 2000 to talk with the JCOP simulator executing JavaCard applet
-  debug process. 
+  debug process.
 
 Files:
 ======
@@ -29,7 +29,7 @@ Notice:
   implemented.
   * No warranty: This software is provided on an "AS IS" basis and without
   any warranty. This software includes a kernel-mode driver and may induce
-  a Blue Screen of Death (or damage your system), but you are solely 
+  a Blue Screen of Death (and damage your system), but you are solely 
   responsible for determining the appropriateness of using this software.
 
 Installation & usage:
@@ -39,9 +39,8 @@ Installation & usage:
   1. Install jcop_vr.sys. I usually use DIP.exe provided at [2]. 
   2. Execute Eclipse or JCOP Tools. 
   3. Set some break points in your JavaCard Applet and invoke JCOP debugger. 
-  4. After successfully installed your applet, type "/close" in JCOP Shell
-  window to close JCOP Shell session. Otherwise, you can not connect to 
-  JCOP simulation socket server. 
+  4. Type "/close" in JCOP Shell window to close JCOP Shell session. 
+  Otherwise, you can not connect to JCOP simulation socket server. 
   5. Execute jcop_proxy.exe. Type "jcop_proxy start" in command prompt.
   6. Open service in control panel, select "Smart Card" service (not "Smart
   Card Helper" service) and restart it. 
@@ -80,6 +79,9 @@ Reference:
 
 History:
 ========
+0.3.1 - 2008-02-06  Kenichi Kanai
+	* Fixed missing recv loop in send_receive().
+
 0.3.0 - 2008-02-04  Kenichi Kanai
 	* Make jcop_proxy.exe work as a background process.
 

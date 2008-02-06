@@ -326,7 +326,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		}
 		MessageBox(
 		    NULL,
-		    _T("jcop_proxy successfully invoked.\ndon't forget to restart 'Smart Card' service."),
+		    _T("jcop_proxy is successfully invoked.\ndon't forget to restart 'Smart Card' service."),
 		    _T("jcop_proxy"),
 		    (MB_OK | MB_ICONINFORMATION)
 		);
