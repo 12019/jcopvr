@@ -309,11 +309,7 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
                        int       nCmdShow)
 {
 
-	if (_tcscmp(lpCmdLine, _T("")) == 0) {
-		err_msg("usage: jcop_proxy <start|stop>");
-		return -1;
-
-	} else if (_tcscmp(lpCmdLine, _T("start")) == 0) {
+	if (_tcscmp(lpCmdLine, _T("start")) == 0) {
 
 		HANDLE ev = OpenEvent(EVENT_MODIFY_STATE, FALSE, "JCopProxyStopThread");
 		if (ev != NULL) {
@@ -354,6 +350,11 @@ int APIENTRY _tWinMain(HINSTANCE hInstance,
 		SetEvent(ev);
 		return 0;
 
+	} else {
+
+		err_msg("usage: jcop_proxy <start|stop>");
+		return -1;
+	
 	}
 
 	return 0;
