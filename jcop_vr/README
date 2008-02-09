@@ -6,8 +6,7 @@ Requires:  Windows 2000
 
   This driver is a Windows version of the JCOP Simulation ifdhandler (see
   JPCSC [1] for more information). It enables your PC/SC client software
-  on Windows 2000 to talk with the JCOP simulator executing JavaCard applet
-  debug process.
+  on Windows 2000 to talk with the JCOP simulator.
 
 Files:
 ======
@@ -53,7 +52,6 @@ Installation & usage:
   
 Compilation:
 ============
-
   jcop_vr.sys
     You need "Windows Server 2003 SP1 DDK" to build jcop_vr.sys. 
 
@@ -72,7 +70,7 @@ Compilation:
     Visual Studio and build it.
 
 Reference:
-======
+==========
 [1] JPCSC http://www.musclecard.com/middle.html
 [2] Windows Device Driver Programming Part 1 (Japanese)
   http://ruffnex.oc.to/kenji/windriver/
